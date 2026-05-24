@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
-import { DEPTHS } from '../config/Constants.js'
 import { EventBus, EVENTS } from '../systems/EventBus.js'
+import { DEPTHS } from '../config/Constants.js'
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
@@ -16,33 +16,45 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.body.setSize(config.bodySize || 22, config.bodySize || 22)
 
     this._gfx = scene.add.graphics()
-    this._hitTimer = null
     this._dead = false
+    this._hitCooldown = false
 
     this.drawSprite()
   }
 
   takeDamage(amount) {
-    if (this._dead) return
-    if (this._hitTimer) return // brief invincibility between hits
+    if (this._dead || this._hitCooldown) return
 
     this.hp -= amount
     this.drawSprite(0xff4444)
 
-    this._hitTimer = this.scene.time.delayedCall(200, () => {
-      this._hitTimer = null
-      if (this.active) this.drawSprite()
+    this._hitCooldown = true
+    this.scene.time.delayedCall(200, () => {
+      this._hitCooldown = false
+      if (this.active && !this._dead) this.drawSprite()
     })
 
     if (this.hp <= 0) this._die()
   }
 
   _die() {
+    if (this._dead) return
     this._dead = true
+
+    // Disable physics immediately so no more overlaps trigger
+    this.setActive(false)
+    this.body.enable = false
+    this.setVisible(false)
+    if (this._gfx) this._gfx.setVisible(false)
+
     EventBus.emit(EVENTS.ENEMY_DIED, { x: this.x, y: this.y })
     EventBus.emit(EVENTS.DEW_BOND_XP, { amount: 10 })
-    this._gfx.destroy()
-    this.destroy()
+
+    // Defer actual destroy to next frame — safe outside physics step
+    this.scene.time.delayedCall(0, () => {
+      if (this._gfx) { this._gfx.destroy(); this._gfx = null }
+      if (this.scene) this.destroy()
+    })
   }
 
   drawSprite(flashColor = null) {
@@ -56,7 +68,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroy() {
-    if (this._gfx) this._gfx.destroy()
+    if (this._gfx) { this._gfx.destroy(); this._gfx = null }
     super.destroy()
   }
 }

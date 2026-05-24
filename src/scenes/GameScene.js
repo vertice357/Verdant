@@ -63,9 +63,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _spawnEntities() {
-    this.projectiles = this.physics.add.group({
-      runChildUpdate: true,
-    })
+    this.projectiles = this.physics.add.group()
 
     this.player = new Player(this, 480, 270)
     this.companion = new Companion(this, 420, 270, this.player)
@@ -82,17 +80,17 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.player.attackHitbox, this.enemies,
-      (_, enemy) => enemy.takeDamage(this.player.attackDamage)
+      (_, enemy) => { if (enemy.active) enemy.takeDamage(this.player.attackDamage) }
     )
 
     this.physics.add.overlap(
       this.player, this.enemies,
-      (player, enemy) => player.takeDamage(enemy.damage)
+      (player, enemy) => { if (enemy.active) player.takeDamage(enemy.damage) }
     )
 
     this.physics.add.overlap(
       this.companion.attackHitbox, this.enemies,
-      (_, enemy) => enemy.takeDamage(this.companion.attackDamage)
+      (_, enemy) => { if (enemy.active) enemy.takeDamage(this.companion.attackDamage) }
     )
 
     this.physics.add.overlap(
@@ -100,21 +98,21 @@ export class GameScene extends Phaser.Scene {
       (proj, enemy) => {
         if (!proj.active || !enemy.active) return
         enemy.takeDamage(proj.damage)
-        proj.destroy()
+        // Defer projectile destroy to next frame
+        this.time.delayedCall(0, () => { if (proj.active) proj.destroy() })
       }
     )
 
-    // Destroy projectiles that hit walls
     this.physics.add.collider(
       this.projectiles, this.walls,
-      (proj) => { if (proj.active) proj.destroy() }
+      (proj) => { this.time.delayedCall(0, () => { if (proj.active) proj.destroy() }) }
     )
   }
 
   update(time, delta) {
     this.player.update(time, delta)
     this.companion.update(time, delta)
-    this.enemies.getChildren().forEach(e => e.update(time, delta))
+    this.enemies.getChildren().forEach(e => { if (e.active) e.update(time, delta) })
     this.debug.update()
   }
 }
