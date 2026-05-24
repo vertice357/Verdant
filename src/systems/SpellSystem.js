@@ -38,8 +38,11 @@ export class SpellSystem {
     gfx.generateTexture('aquaBoltTex', spell.size * 2 + 4, spell.size * 2 + 4)
     gfx.destroy()
 
-    const startX = this.player.x + dx * 22
-    const startY = this.player.y + dy * 22
+    // Spawn from the physics body centre so the bolt leaves from Sage's hands
+    const originX = this.player.body.center.x
+    const originY = this.player.body.center.y
+    const startX = originX + dx * 22
+    const startY = originY + dy * 22
 
     const proj = this.scene.projectiles.create(startX, startY, 'aquaBoltTex')
     proj.setDepth(DEPTHS.PROJECTILES)
