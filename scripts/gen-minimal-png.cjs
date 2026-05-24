@@ -4,8 +4,8 @@ const zlib = require('zlib')
 const fs = require('fs')
 const path = require('path')
 
-// Create a minimal 256×160 PNG (2 frames of 128×160)
-const W = 256, H = 160
+// Create a minimal 256×128 PNG (2 frames of 128×128)
+const W = 256, H = 128
 
 // Build raw scanline data
 const raw = Buffer.alloc(H * (1 + W * 3))
@@ -77,4 +77,4 @@ const png = Buffer.concat([
 const outPath = path.join(__dirname, '..', 'public', 'assets', 'sprites', 'sage.png')
 fs.writeFileSync(outPath, png)
 console.log(`✓ Created minimal test PNG: ${W}×${H} (${png.length} bytes)`)
-console.log(`  2 frames of 128×160 (left=red, right=blue)`)
+console.log(`  2 frames of 128×128 (left=red, right=blue)`)
