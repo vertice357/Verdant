@@ -17,11 +17,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this)
 
     this.setDepth(DEPTHS.PLAYER)
-    this.setDisplaySize(DISPLAY_W, DISPLAY_H)
+    this.setScale(0.5) // Scale down from 128×160 to ~64×80
 
     // Physics body centered within the displayed frame
     this.body.setSize(20, 20)
-    this.body.setOffset((DISPLAY_W - 20) / 2, (DISPLAY_H - 20) / 2)
+    this.body.setOffset(22, 30)
 
     this._swingGfx = scene.add.graphics().setDepth(DEPTHS.PLAYER - 1)
 
@@ -99,18 +99,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   _playAnim() {
     if (this.state === STATES.ATTACK) return
 
-    if (this.state === STATES.WALK) {
-      this.setFlipX(this.facing === 'left')
-      this.play('player_walk', true)
-    } else {
-      this.setFlipX(this.facing === 'left')
-      if (this.facing === 'up') {
-        this.play('player_idle_up', true)
-      } else if (this.facing === 'down') {
-        this.play('player_idle_down', true)
+    try {
+      if (this.state === STATES.WALK) {
+        this.setFlipX(this.facing === 'left')
+        this.play('player_walk', true)
       } else {
-        this.play('player_idle_side', true)
+        this.setFlipX(this.facing === 'left')
+        if (this.facing === 'up') {
+          this.play('player_idle_up', true)
+        } else if (this.facing === 'down') {
+          this.play('player_idle_down', true)
+        } else {
+          this.play('player_idle_side', true)
+        }
       }
+    } catch (e) {
+      console.error('[Player._playAnim] Error:', e.message, { state: this.state, facing: this.facing })
     }
   }
 
