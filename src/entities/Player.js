@@ -6,16 +6,23 @@ import { PLAYER, DEPTHS } from '../config/Constants.js'
 
 const STATES = { IDLE: 'idle', WALK: 'walk', ATTACK: 'attack', HURT: 'hurt', DEAD: 'dead' }
 
+// Displayed size after scaling the 128×160 sprite sheet frame
+const DISPLAY_W = 64
+const DISPLAY_H = 80
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, null)
+    super(scene, x, y, 'player', 1)
     scene.add.existing(this)
     scene.physics.add.existing(this)
 
     this.setDepth(DEPTHS.PLAYER)
-    this.body.setSize(20, 20)
+    this.setDisplaySize(DISPLAY_W, DISPLAY_H)
 
-    this._gfx = scene.add.graphics()
+    // Physics body centered within the displayed frame
+    this.body.setSize(20, 20)
+    this.body.setOffset((DISPLAY_W - 20) / 2, (DISPLAY_H - 20) / 2)
+
     this._swingGfx = scene.add.graphics().setDepth(DEPTHS.PLAYER - 1)
 
     this.hp = PLAYER.HP_MAX
@@ -47,6 +54,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     })
 
     this._attackTimer = null
+    this.play('player_idle_down')
   }
 
   update(time, delta) {
@@ -68,7 +76,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.spellSystem.cast('aquaBolt', this.facing)
     }
 
-    this._gfx.setPosition(this.x, this.y)
     this._swingGfx.setPosition(this.x, this.y)
     this.attackHitbox.setPosition(...this._hitboxPos())
   }
@@ -87,25 +94,42 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.state = STATES.IDLE
     }
-    this._drawSprite()
+    this._playAnim()
+  }
+
+  _playAnim() {
+    if (this.state === STATES.ATTACK) return
+
+    if (this.state === STATES.WALK) {
+      this.setFlipX(this.facing === 'left')
+      this.play('player_walk', true)
+    } else {
+      this.setFlipX(this.facing === 'left')
+      if (this.facing === 'up') {
+        this.play('player_idle_up', true)
+      } else if (this.facing === 'down') {
+        this.play('player_idle_down', true)
+      } else {
+        this.play('player_idle_side', true)
+      }
+    }
   }
 
   _doAttack() {
     this.state = STATES.ATTACK
     this.setVelocity(0, 0)
 
-    // Invulnerable during the swing
     this.iframes = true
     this.attackHitbox.body.enable = true
     this._drawSwingArc()
-    this._drawSprite()
+    this.play('player_attack', true)
 
     if (this._attackTimer) this._attackTimer.remove()
     this._attackTimer = this.scene.time.delayedCall(PLAYER.ATTACK_DURATION, () => {
       this.attackHitbox.body.enable = false
       this._swingGfx.clear()
       this.state = STATES.IDLE
-      // Short grace period after swing before iframes drop
+      this._playAnim()
       this.scene.time.delayedCall(80, () => { this.iframes = false })
     })
   }
@@ -126,12 +150,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(PLAYER.IFRAME_DURATION, () => { this.iframes = false })
 
     this.scene.tweens.add({
-      targets: this._gfx,
+      targets: this,
       alpha: 0,
       yoyo: true,
       repeat: 5,
       duration: 100,
-      onComplete: () => this._gfx.setAlpha(1),
+      onComplete: () => this.setAlpha(1),
     })
   }
 
@@ -146,7 +170,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return map[this.facing]
   }
 
-  // Draw a visible swing arc in the attack direction
   _drawSwingArc() {
     this._swingGfx.clear()
     this._swingGfx.lineStyle(3, 0xdda0f0, 0.85)
@@ -171,31 +194,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._swingGfx.strokePath()
   }
 
-  _drawSprite() {
-    this._gfx.clear()
-    const color = this.state === STATES.ATTACK ? 0xdda0f0 : 0xc084fc
-    this._gfx.fillStyle(color, 1)
-    this._gfx.fillRect(-10, -14, 20, 24)
-    this._gfx.fillStyle(0x9333ea, 1)
-    this._gfx.fillRect(-12, -4, 24, 14)
-    this._gfx.fillStyle(0xfbbf80, 1)
-    this._gfx.fillRect(-6, -20, 12, 10)
-    // Facing dot
-    this._gfx.fillStyle(0xffffff, 1)
-    const d = this.facing
-    if (d === 'down')  this._gfx.fillRect(-2, 8, 4, 4)
-    if (d === 'up')    this._gfx.fillRect(-2, -18, 4, 4)
-    if (d === 'right') this._gfx.fillRect(8, -2, 4, 4)
-    if (d === 'left')  this._gfx.fillRect(-12, -2, 4, 4)
-    // Staff
-    this._gfx.fillStyle(0x92400e, 1)
-    this._gfx.fillRect(10, -22, 3, 28)
-    this._gfx.fillStyle(0xc084fc, 1)
-    this._gfx.fillCircle(11, -24, 4)
-  }
-
   destroy() {
-    this._gfx.destroy()
     this._swingGfx.destroy()
     super.destroy()
   }
