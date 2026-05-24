@@ -37,62 +37,60 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    const assetUrl = 'assets/sprites/sage.png'
-
-    fetch(assetUrl)
-      .then(r => console.log(`✓ Asset exists at ${assetUrl} (status ${r.status})`))
-      .catch(e => console.error(`❌ Asset not found: ${assetUrl}`, e))
-
     this.load.on('loaderror', (fileObj) => {
       console.error('❌ Phaser load error:', { key: fileObj.key, url: fileObj.url })
     })
-
     this.load.on('filecomplete', (key) => console.log(`✓ Phaser loaded: ${key}`))
 
-    console.log(`[preload] Loading spritesheet from: ${assetUrl}`)
-    this.load.spritesheet('player', assetUrl, { frameWidth: FRAME_W, frameHeight: FRAME_H })
+    this.load.spritesheet('player', 'assets/sprites/sage.png',    { frameWidth: FRAME_W, frameHeight: FRAME_H })
+    this.load.spritesheet('dew',    'assets/sprites/dew-sheet.png', { frameWidth: FRAME_W, frameHeight: FRAME_H })
   }
 
   create() {
-    const tex = this.textures.get('player')
-    if (!tex) {
-      console.error('❌ CRITICAL: player texture undefined in create()')
-      return
-    }
-
-    const frameTotal = tex.frameTotal || tex.getFrameNames?.().length || 0
-    console.log(`✓ Texture 'player' exists with ${frameTotal} frames`)
-
     const anims = this.anims
 
-    // Idle — one frame per direction, looped
+    // ── Player (Sage) animations ──────────────────────────────────────────
     for (const [key, frame] of [
-      ['player_idle_down',  F.IDLE_DOWN],
-      ['player_idle_up',    F.IDLE_UP],
-      ['player_idle_left',  F.IDLE_LEFT],
-      ['player_idle_right', F.IDLE_RIGHT],
+      ['player_idle_down',  F.IDLE_DOWN],  ['player_idle_up',    F.IDLE_UP],
+      ['player_idle_left',  F.IDLE_LEFT],  ['player_idle_right', F.IDLE_RIGHT],
     ]) {
       anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [frame] }), frameRate: 1, repeat: -1 })
     }
-
-    // Walk — two frames (A/B) per direction, looped
-    for (const [key, frameA, frameB] of [
+    for (const [key, a, b] of [
       ['player_walk_down',  F.WALK_DOWN_A,  F.WALK_DOWN_B],
       ['player_walk_up',    F.WALK_UP_A,    F.WALK_UP_B],
       ['player_walk_left',  F.WALK_LEFT_A,  F.WALK_LEFT_B],
       ['player_walk_right', F.WALK_RIGHT_A, F.WALK_RIGHT_B],
     ]) {
-      anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [frameA, frameB] }), frameRate: 8, repeat: -1 })
+      anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [a, b] }), frameRate: 8, repeat: -1 })
     }
-
-    // Attack — one frame per direction, plays once
     for (const [key, frame] of [
-      ['player_attack_down',  F.ATK_DOWN],
-      ['player_attack_up',    F.ATK_UP],
-      ['player_attack_left',  F.ATK_LEFT],
-      ['player_attack_right', F.ATK_RIGHT],
+      ['player_attack_down',  F.ATK_DOWN],  ['player_attack_up',    F.ATK_UP],
+      ['player_attack_left',  F.ATK_LEFT],  ['player_attack_right', F.ATK_RIGHT],
     ]) {
       anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [frame] }), frameRate: 14, repeat: 0 })
+    }
+
+    // ── Dew animations (same frame layout as Sage) ────────────────────────
+    for (const [key, frame] of [
+      ['dew_idle_down',  F.IDLE_DOWN],  ['dew_idle_up',    F.IDLE_UP],
+      ['dew_idle_left',  F.IDLE_LEFT],  ['dew_idle_right', F.IDLE_RIGHT],
+    ]) {
+      anims.create({ key, frames: anims.generateFrameNumbers('dew', { frames: [frame] }), frameRate: 1, repeat: -1 })
+    }
+    for (const [key, a, b] of [
+      ['dew_walk_down',  F.WALK_DOWN_A,  F.WALK_DOWN_B],
+      ['dew_walk_up',    F.WALK_UP_A,    F.WALK_UP_B],
+      ['dew_walk_left',  F.WALK_LEFT_A,  F.WALK_LEFT_B],
+      ['dew_walk_right', F.WALK_RIGHT_A, F.WALK_RIGHT_B],
+    ]) {
+      anims.create({ key, frames: anims.generateFrameNumbers('dew', { frames: [a, b] }), frameRate: 10, repeat: -1 })
+    }
+    for (const [key, frame] of [
+      ['dew_attack_down',  F.ATK_DOWN],  ['dew_attack_up',    F.ATK_UP],
+      ['dew_attack_left',  F.ATK_LEFT],  ['dew_attack_right', F.ATK_RIGHT],
+    ]) {
+      anims.create({ key, frames: anims.generateFrameNumbers('dew', { frames: [frame] }), frameRate: 14, repeat: 0 })
     }
 
     console.log('✓ All animations registered')
