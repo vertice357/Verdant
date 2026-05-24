@@ -25,30 +25,52 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    const assetUrl = 'assets/sprites/sage.png'
+
+    // First check: can we fetch the asset?
+    fetch(assetUrl)
+      .then(r => {
+        console.log(`✓ Asset exists at ${assetUrl} (status ${r.status})`)
+      })
+      .catch(e => console.error(`❌ Asset not found: ${assetUrl}`, e))
+
     const load = this.load
 
     load.on('loaderror', (fileObj) => {
-      console.error('❌ Failed to load:', fileObj.key, fileObj.url)
+      console.error('❌ Phaser load error:', {
+        key: fileObj.key,
+        url: fileObj.url,
+        state: fileObj.state,
+      })
     })
 
     load.on('filecomplete', (key) => {
-      console.log(`✓ Loaded file: ${key}`)
+      console.log(`✓ Phaser loaded: ${key}`)
     })
 
-    load.spritesheet('player', 'assets/sprites/sage.png', {
+    console.log(`[preload] Loading spritesheet from: ${assetUrl}`)
+    load.spritesheet('player', assetUrl, {
       frameWidth: FRAME_W,
       frameHeight: FRAME_H,
     })
   }
 
   create() {
+    console.log('[create] Texture manager keys:', this.textures.getTextureKeys())
+
     const tex = this.textures.get('player')
-    if (!tex || tex.frameTotal === 0) {
-      console.error('❌ player texture not loaded or empty')
-      console.error('Expected: assets/sprites/sage.png')
-      console.error('Texture manager keys:', this.textures.getTextureKeys())
-    } else {
-      console.log(`✓ Texture 'player' ready: ${tex.frameTotal} frames`)
+    if (!tex) {
+      console.error('❌ CRITICAL: player texture undefined in create()')
+      console.error('Available textures:', this.textures.getTextureKeys())
+      return // Bail out; can't proceed without texture
+    }
+
+    const frameTotal = tex.frameTotal || tex.getFrameNames?.().length || 0
+    console.log(`✓ Texture 'player' exists with ${frameTotal} frames`)
+
+    if (frameTotal === 0) {
+      console.error('❌ player texture has zero frames!')
+      return
     }
 
     const anims = this.anims
