@@ -5,18 +5,16 @@ const FRAME_W = 128
 const FRAME_H = 128  // Changed from 160 to 128 (power of 2)
 const SHEET_COLS = 2 // Temporary: testing with minimal PNG
 
-// Frame indices (row * SHEET_COLS + col)
-// Row 0: 8 directional idle/standing poses
-// Row 1: 7-frame walk cycle (indices 8-14)
-// Row 2: 5-frame attack sequence (indices 16-20)
+// Frame indices — adjust based on actual spritesheet
+// For 256×128 test PNG: only 2 frames (0, 1)
 const F = {
-  IDLE_DOWN:   0,   // Use frame 0 for all idles (testing)
-  IDLE_UP:     0,
+  IDLE_DOWN:   0,
+  IDLE_UP:     1,
   IDLE_SIDE:   0,
-  WALK_START:  8,
-  WALK_END:    14,
-  ATK_START:   16,
-  ATK_END:     20,
+  WALK_START:  0,   // Use available frames
+  WALK_END:    1,
+  ATK_START:   0,
+  ATK_END:     1,
 }
 
 export class BootScene extends Phaser.Scene {
