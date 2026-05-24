@@ -12,7 +12,7 @@ const DISPLAY_H = 80
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, 'player', 1)
+    super(scene, x, y, 'player', 0)
     scene.add.existing(this)
     scene.physics.add.existing(this)
 
@@ -54,7 +54,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     })
 
     this._attackTimer = null
-    this.play('player_idle_down')
   }
 
   update(time, delta) {
