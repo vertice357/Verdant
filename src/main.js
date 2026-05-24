@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import VirtualJoystickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-plugin.js'
 import { BootScene } from './scenes/BootScene.js'
 import { GameScene } from './scenes/GameScene.js'
 import { HUDScene } from './scenes/HUDScene.js'
@@ -36,6 +37,9 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: { gravity: { y: 0 }, debug: false },
+  },
+  plugins: {
+    global: [{ key: 'rexVirtualJoystick', plugin: VirtualJoystickPlugin, start: true }],
   },
   scene: [BootScene, GameScene, HUDScene],
   callbacks: {

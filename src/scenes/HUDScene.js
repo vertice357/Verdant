@@ -30,11 +30,13 @@ export class HUDScene extends Phaser.Scene {
       color: '#818cf8',
     }).setDepth(DEPTHS.HUD)
 
-    this.add.text(16, 64, 'SPACE: attack  Q: Aqua Bolt  F: debug', {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#6b7280',
-    }).setDepth(DEPTHS.HUD)
+    if (!window.matchMedia('(pointer: coarse)').matches) {
+      this.add.text(16, 64, 'SPACE: attack  Q: Aqua Bolt  F: debug', {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        color: '#6b7280',
+      }).setDepth(DEPTHS.HUD)
+    }
   }
 
   _hpString() {

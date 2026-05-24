@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { TouchControls } from '../systems/TouchControls.js'
 import { Player } from '../entities/Player.js'
 import { Companion } from '../entities/Companion.js'
 import { Mossling } from '../entities/enemies/Mossling.js'
@@ -15,6 +16,10 @@ export class GameScene extends Phaser.Scene {
     this._buildRoom()
     this._spawnEntities()
     this.debug = new DebugOverlay(this)
+
+    // Wire touch controls after player exists
+    const touch = new TouchControls(this)
+    this.player.input.setTouchControls(touch)
 
     EventBus.on(EVENTS.PLAYER_DIED, () => {
       this.time.delayedCall(800, () => {
