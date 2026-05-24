@@ -42,7 +42,7 @@ export class BootScene extends Phaser.Scene {
     })
     this.load.on('filecomplete', (key) => console.log(`✓ Phaser loaded: ${key}`))
 
-    this.load.spritesheet('player', 'assets/sprites/sage.png',    { frameWidth: FRAME_W, frameHeight: FRAME_H })
+    this.load.spritesheet('player', 'assets/sprites/sage-sheet.png',    { frameWidth: FRAME_W, frameHeight: FRAME_H })
     this.load.spritesheet('dew',    'assets/sprites/dew-sheet.png', { frameWidth: FRAME_W, frameHeight: FRAME_H })
   }
 
