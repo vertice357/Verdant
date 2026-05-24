@@ -35,12 +35,10 @@ export class GameScene extends Phaser.Scene {
   _buildRoom() {
     const W = 960, H = 540, T = 32
 
-    // Floor
     const floor = this.add.graphics().setDepth(DEPTHS.FLOOR)
     floor.fillStyle(0x2d4a3e)
     floor.fillRect(T * 2, T * 2, W - T * 4, H - T * 4)
 
-    // Walls (visual)
     const wallGfx = this.add.graphics().setDepth(DEPTHS.FLOOR)
     wallGfx.fillStyle(0x1a2e28)
     wallGfx.fillRect(0, 0, W, T * 2)
@@ -50,7 +48,6 @@ export class GameScene extends Phaser.Scene {
     wallGfx.lineStyle(2, 0x374151, 1)
     wallGfx.strokeRect(T * 2, T * 2, W - T * 4, H - T * 4)
 
-    // Wall physics bodies
     this.walls = this.physics.add.staticGroup()
     const wallDefs = [
       { x: W / 2, y: T,       w: W,     h: T * 2 },
@@ -66,7 +63,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   _spawnEntities() {
-    this.projectiles = this.physics.add.group()
+    this.projectiles = this.physics.add.group({
+      runChildUpdate: true,
+    })
 
     this.player = new Player(this, 480, 270)
     this.companion = new Companion(this, 420, 270, this.player)
@@ -77,37 +76,38 @@ export class GameScene extends Phaser.Scene {
       this.enemies.add(new Mossling(this, pos.x, pos.y, this.player))
     })
 
-    // Colliders
     this.physics.add.collider(this.player, this.walls)
     this.physics.add.collider(this.companion, this.walls)
     this.physics.add.collider(this.enemies, this.walls)
 
-    // Sage melee
     this.physics.add.overlap(
       this.player.attackHitbox, this.enemies,
       (_, enemy) => enemy.takeDamage(this.player.attackDamage)
     )
 
-    // Enemy contact
     this.physics.add.overlap(
       this.player, this.enemies,
       (player, enemy) => player.takeDamage(enemy.damage)
     )
 
-    // Dew bite
     this.physics.add.overlap(
       this.companion.attackHitbox, this.enemies,
       (_, enemy) => enemy.takeDamage(this.companion.attackDamage)
     )
 
-    // Aqua bolt
     this.physics.add.overlap(
       this.projectiles, this.enemies,
       (proj, enemy) => {
+        if (!proj.active || !enemy.active) return
         enemy.takeDamage(proj.damage)
-        if (proj._gfx) proj._gfx.destroy()
         proj.destroy()
       }
+    )
+
+    // Destroy projectiles that hit walls
+    this.physics.add.collider(
+      this.projectiles, this.walls,
+      (proj) => { if (proj.active) proj.destroy() }
     )
   }
 
