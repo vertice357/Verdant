@@ -38,11 +38,14 @@ export class SpellSystem {
     gfx.generateTexture('aquaBoltTex', spell.size * 2 + 4, spell.size * 2 + 4)
     gfx.destroy()
 
-    // Spawn from the physics body centre so the bolt leaves from Sage's hands
-    const originX = this.player.body.center.x
-    const originY = this.player.body.center.y
-    const startX = originX + dx * 22
-    const startY = originY + dy * 22
+    // Spawn from Sage's hands — sprite visual centre with a slight upward
+    // correction (body is anchored at feet, hands are higher up the frame)
+    const originX = this.player.x
+    const originY = this.player.y - 8
+
+    // Side shots stay at hand height; up/down shots travel along the spine
+    const startX = originX + dx * 14
+    const startY = originY + dy * 14
 
     const proj = this.scene.projectiles.create(startX, startY, 'aquaBoltTex')
     proj.setDepth(DEPTHS.PROJECTILES)
