@@ -30,12 +30,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this)
 
     this.setDepth(DEPTHS.PLAYER)
-    // 270×270 source frame → ~108×108 displayed
-    this.setScale(0.4)
+    // 64×64 frame rendered at 1:1 — no scaling
 
-    // Physics body: centred on Sage's feet in the displayed frame
-    this.body.setSize(28, 28)
-    this.body.setOffset(40, 68)
+    // Physics body: centred on Sage's feet in the 64×64 frame
+    this.body.setSize(20, 16)
+    this.body.setOffset(22, 44)
 
     this._swingGfx = scene.add.graphics().setDepth(DEPTHS.PLAYER - 1)
 

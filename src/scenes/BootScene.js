@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 
-// Spritesheet: 1080×1080, 4 cols × 4 rows, 270×270px per frame
+// Spritesheet: 256×256, 4 cols × 4 rows, 64×64px per frame — no in-engine scaling
 // Frame index = row * 4 + col
 //
 //         col0          col1          col2          col3
@@ -9,8 +9,8 @@ import Phaser from 'phaser'
 // row2 |  8 walk_down | 9 walk_up  |10 walk_left |11 walk_right | (walk B)
 // row3 | 12 atk_down  |13 atk_up   |14 atk_left  |15 atk_right  |
 
-const FRAME_W = 270
-const FRAME_H = 270
+const FRAME_W = 64
+const FRAME_H = 64
 
 export const F = {
   IDLE_DOWN:  0,
