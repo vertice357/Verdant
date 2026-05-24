@@ -125,7 +125,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.iframes = true
     this.attackHitbox.body.enable = true
     this._drawSwingArc()
-    this.play('player_attack', true)
+
+    try {
+      this.play('player_attack', true)
+    } catch (e) {
+      console.error('[Player._doAttack] Animation error:', e.message)
+    }
 
     if (this._attackTimer) this._attackTimer.remove()
     this._attackTimer = this.scene.time.delayedCall(PLAYER.ATTACK_DURATION, () => {
