@@ -18,6 +18,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this._gfx = scene.add.graphics()
     this._dead = false
     this._hitCooldown = false
+    this._isFlashing = false  // prevents update() from overwriting hit flash
 
     this.drawSprite()
   }
@@ -28,18 +29,37 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.hp -= amount
     this._hitCooldown = true
+    this._isFlashing = true
+    this.drawSprite(0xffffff)  // white flash on hit
 
-    this.scene.time.delayedCall(200, () => {
+    // Show hit sparks
+    this._spawnHitEffect()
+
+    this.scene.time.delayedCall(120, () => {
+      if (this._dead) return
+      this.drawSprite(0xff4444)  // red tint after white flash
+    })
+
+    this.scene.time.delayedCall(300, () => {
+      this._isFlashing = false
       this._hitCooldown = false
       if (!this._dead && this.active) this.drawSprite()
     })
-
-    this.drawSprite(0xff4444)
 
     if (this.hp <= 0) {
       console.log('[ENEMY] hp <= 0, calling _die()')
       this._die()
     }
+  }
+
+  _spawnHitEffect() {
+    // Quick star-burst sparks at hit position
+    const sparks = this.scene.add.graphics()
+    sparks.setDepth(DEPTHS.ENEMIES + 1)
+    sparks.fillStyle(0xfbbf24, 1)
+    const offsets = [[-8, -8], [8, -8], [-8, 8], [8, 8], [0, -12], [0, 12]]
+    offsets.forEach(([ox, oy]) => sparks.fillRect(this.x + ox - 2, this.y + oy - 2, 4, 4))
+    this.scene.time.delayedCall(180, () => sparks.destroy())
   }
 
   _die() {
@@ -56,7 +76,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     EventBus.emit(EVENTS.DEW_BOND_XP, { amount: 10 })
 
     this.scene.time.delayedCall(0, () => {
-      console.log('[ENEMY] deferred destroy firing')
       try {
         if (this._gfx) { this._gfx.destroy(); this._gfx = null }
         if (this.scene) this.destroy()
@@ -65,7 +84,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   drawSprite(flashColor = null) {
-    // Overridden by subclasses
+    // Overridden by subclasses — flashColor passed through
   }
 
   syncGfx() {
