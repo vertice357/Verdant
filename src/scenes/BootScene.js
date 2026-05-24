@@ -6,11 +6,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // placeholder: real asset loading goes here in Phase 2
+    // Phase 2: load tilemap + spritesheet assets here
   }
 
   create() {
     console.log('Boot OK')
     this.scene.start('GameScene')
+    this.scene.launch('HUDScene')
   }
 }

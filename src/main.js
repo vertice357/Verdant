@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene.js'
 import { GameScene } from './scenes/GameScene.js'
+import { HUDScene } from './scenes/HUDScene.js'
 
 const config = {
   type: Phaser.AUTO,
@@ -15,7 +16,7 @@ const config = {
       debug: false,
     },
   },
-  scene: [BootScene, GameScene],
+  scene: [BootScene, GameScene, HUDScene],
 }
 
 const game = new Phaser.Game(config)
