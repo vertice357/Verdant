@@ -10,9 +10,9 @@ const SHEET_COLS = 8
 // Row 1: 7-frame walk cycle (indices 8-14)
 // Row 2: 5-frame attack sequence (indices 16-20)
 const F = {
-  IDLE_DOWN:   1,   // front-facing
-  IDLE_UP:     3,   // back-facing
-  IDLE_SIDE:   5,   // side profile (flipX for left)
+  IDLE_DOWN:   0,   // Use frame 0 for all idles (testing)
+  IDLE_UP:     0,
+  IDLE_SIDE:   0,
   WALK_START:  8,
   WALK_END:    14,
   ATK_START:   16,
