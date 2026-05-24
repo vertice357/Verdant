@@ -2,8 +2,8 @@ import Phaser from 'phaser'
 
 // Sprite sheet frame dimensions — adjust these if the image differs
 const FRAME_W = 128
-const FRAME_H = 160
-const SHEET_COLS = 8
+const FRAME_H = 128  // Changed from 160 to 128 (power of 2)
+const SHEET_COLS = 2 // Temporary: testing with minimal PNG
 
 // Frame indices (row * SHEET_COLS + col)
 // Row 0: 8 directional idle/standing poses
