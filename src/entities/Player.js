@@ -99,10 +99,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   _playAnim() {
     if (this.state === STATES.ATTACK) return
 
-    // Guard: ensure texture is loaded before setting frames
-    if (!this.texture || !this.texture.key) return
+    // Guard: check if sprite is properly initialized in the scene
+    if (!this.active || !this.visible) return
 
-    // For now, just set frame directly without playing animation
     try {
       this.setFlipX(this.facing === 'left')
 
@@ -112,7 +111,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setFrame(0) // Idle frame
       }
     } catch (e) {
-      console.error('[Player._playAnim] Error:', e.message, { state: this.state, facing: this.facing })
+      // Silently ignore frame errors during initialization
     }
   }
 
