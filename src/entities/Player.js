@@ -6,9 +6,22 @@ import { PLAYER, DEPTHS } from '../config/Constants.js'
 
 const STATES = { IDLE: 'idle', WALK: 'walk', ATTACK: 'attack', HURT: 'hurt', DEAD: 'dead' }
 
-// Displayed size after scaling the 128×128 sprite sheet frame
-const DISPLAY_W = 64
-const DISPLAY_H = 64
+// Animation key builder — maps state + facing to the 16-frame spritesheet
+// Spritesheet layout (128×128 frames, 4 cols × 4 rows):
+//   row 0: idle_down  idle_up  idle_left  idle_right
+//   row 1: walk_down_a walk_up_a walk_left_a walk_right_a
+//   row 2: walk_down_b walk_up_b walk_left_b walk_right_b
+//   row 3: attack_down attack_up attack_left attack_right
+//
+// hurt/dead reuse the idle frame for the current facing direction
+// (no dedicated hurt/dead row in the sheet; visual feedback via tween)
+const animKey = (state, facing) => {
+  switch (state) {
+    case STATES.WALK:   return `player_walk_${facing}`
+    case STATES.ATTACK: return `player_attack_${facing}`
+    default:            return `player_idle_${facing}`   // idle, hurt, dead
+  }
+}
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -17,25 +30,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this)
 
     this.setDepth(DEPTHS.PLAYER)
-    this.setScale(0.5) // Scale down from 128×160 to ~64×80
+    this.setScale(0.5)
 
-    // Physics body centered within the displayed frame
+    // Physics body: centred in the 64×64 displayed frame
     this.body.setSize(20, 20)
     this.body.setOffset(22, 30)
 
     this._swingGfx = scene.add.graphics().setDepth(DEPTHS.PLAYER - 1)
 
-    this.hp = PLAYER.HP_MAX
-    this.mana = PLAYER.MANA_MAX
+    this.hp           = PLAYER.HP_MAX
+    this.mana         = PLAYER.MANA_MAX
     this.attackDamage = PLAYER.ATTACK_DAMAGE
-    this.facing = 'down'
-    this.state = STATES.IDLE
-    this.iframes = false
+    this.facing       = 'down'
+    this.state        = STATES.IDLE
+    this.iframes      = false
 
-    this.input = new InputSystem(scene)
+    this.input       = new InputSystem(scene)
     this.spellSystem = new SpellSystem(scene, this)
 
-    // Attack hitbox — larger and further out
     this.attackHitbox = scene.physics.add.image(x, y, null)
     this.attackHitbox.body.setSize(PLAYER.ATTACK_HITBOX_SIZE, PLAYER.ATTACK_HITBOX_SIZE)
     this.attackHitbox.body.enable = false
@@ -54,7 +66,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     })
 
     this._attackTimer = null
+    this._hurtTimer   = null
   }
+
+  // ─── main loop ───────────────────────────────────────────────────────────
 
   update(time, delta) {
     if (this.state === STATES.DEAD) return
@@ -79,6 +94,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.attackHitbox.setPosition(...this._hitboxPos())
   }
 
+  // ─── movement ────────────────────────────────────────────────────────────
+
   _handleMovement() {
     const { dx, dy } = this.input.getMovement()
     this.setVelocity(dx * PLAYER.SPEED, dy * PLAYER.SPEED)
@@ -93,31 +110,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.state = STATES.IDLE
     }
+
     this._playAnim()
   }
 
+  // ─── animation ───────────────────────────────────────────────────────────
+
   _playAnim() {
-    if (this.state === STATES.ATTACK) return
-    if (!this.active || !this.visible) return
-
-    const dir = this.facing
-    const key = this.state === STATES.WALK
-      ? `player_walk_${dir}`
-      : `player_idle_${dir}`
-
+    const key = animKey(this.state, this.facing)
     if (this.anims.currentAnim?.key !== key) {
       this.play(key)
     }
   }
 
+  // ─── attack ──────────────────────────────────────────────────────────────
+
   _doAttack() {
     this.state = STATES.ATTACK
     this.setVelocity(0, 0)
-
     this.iframes = true
     this.attackHitbox.body.enable = true
     this._drawSwingArc()
-    this.play(`player_attack_${this.facing}`)
+    this._playAnim()
 
     if (this._attackTimer) this._attackTimer.remove()
     this._attackTimer = this.scene.time.delayedCall(PLAYER.ATTACK_DURATION, () => {
@@ -129,6 +143,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     })
   }
 
+  // ─── damage / hurt / dead ────────────────────────────────────────────────
+
   takeDamage(amount) {
     if (this.iframes || this.state === STATES.DEAD) return
 
@@ -136,33 +152,66 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     EventBus.emit(EVENTS.PLAYER_DAMAGED, { hp: this.hp })
 
     if (this.hp <= 0) {
-      this.state = STATES.DEAD
-      EventBus.emit(EVENTS.PLAYER_DIED)
+      this._doDie()
       return
     }
 
-    this.iframes = true
-    this.scene.time.delayedCall(PLAYER.IFRAME_DURATION, () => { this.iframes = false })
+    this._doHurt()
+  }
 
+  _doHurt() {
+    this.state   = STATES.HURT
+    this.iframes = true
+    this._playAnim()   // shows idle_{facing} frozen — no dedicated hurt row
+
+    // Flash tween for visual feedback
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
       yoyo: true,
-      repeat: 5,
-      duration: 100,
+      repeat: 4,
+      duration: 80,
       onComplete: () => this.setAlpha(1),
+    })
+
+    if (this._hurtTimer) this._hurtTimer.remove()
+    this._hurtTimer = this.scene.time.delayedCall(PLAYER.IFRAME_DURATION, () => {
+      if (this.state === STATES.HURT) {
+        this.state = STATES.IDLE
+        this._playAnim()
+      }
+      this.iframes = false
     })
   }
 
+  _doDie() {
+    this.state = STATES.DEAD
+    this.setVelocity(0, 0)
+    this.attackHitbox.body.enable = false
+    this._swingGfx.clear()
+
+    // Fade out on the idle_{facing} frame (no dead row in sheet)
+    this._playAnim()
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+    })
+
+    EventBus.emit(EVENTS.PLAYER_DIED)
+  }
+
+  // ─── helpers ─────────────────────────────────────────────────────────────
+
   _hitboxPos() {
     const o = PLAYER.ATTACK_OFFSET
-    const map = {
+    return {
       up:    [this.x,     this.y - o],
       down:  [this.x,     this.y + o],
       left:  [this.x - o, this.y    ],
       right: [this.x + o, this.y    ],
-    }
-    return map[this.facing]
+    }[this.facing]
   }
 
   _drawSwingArc() {
@@ -178,12 +227,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       up:    { start: 210, end: 330 },
     }
     const { start, end } = angles[this.facing]
-    const s = Phaser.Math.DegToRad(start)
-    const e = Phaser.Math.DegToRad(end)
-
     this._swingGfx.beginPath()
     this._swingGfx.moveTo(0, 0)
-    this._swingGfx.arc(0, 0, r, s, e)
+    this._swingGfx.arc(0, 0, r, Phaser.Math.DegToRad(start), Phaser.Math.DegToRad(end))
     this._swingGfx.closePath()
     this._swingGfx.fillPath()
     this._swingGfx.strokePath()
