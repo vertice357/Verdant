@@ -17,16 +17,12 @@ export class GameScene extends Phaser.Scene {
     this.debug = new DebugOverlay(this)
 
     EventBus.on(EVENTS.PLAYER_DIED, () => {
-      this.time.delayedCall(1000, () => {
+      this.time.delayedCall(800, () => {
         this.add.text(480, 270, 'GAME OVER', {
-          fontFamily: 'monospace',
-          fontSize: '32px',
-          color: '#ef4444',
+          fontFamily: 'monospace', fontSize: '32px', color: '#ef4444',
         }).setOrigin(0.5).setDepth(DEPTHS.HUD)
         this.add.text(480, 310, 'Refresh to restart', {
-          fontFamily: 'monospace',
-          fontSize: '14px',
-          color: '#6b7280',
+          fontFamily: 'monospace', fontSize: '14px', color: '#6b7280',
         }).setOrigin(0.5).setDepth(DEPTHS.HUD)
       })
     })
@@ -78,41 +74,87 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.companion, this.walls)
     this.physics.add.collider(this.enemies, this.walls)
 
+    // Sage melee
     this.physics.add.overlap(
       this.player.attackHitbox, this.enemies,
-      (_, enemy) => { if (enemy.active) enemy.takeDamage(this.player.attackDamage) }
+      (_, enemy) => {
+        try {
+          if (enemy._dead || !enemy.active) return
+          enemy.takeDamage(this.player.attackDamage)
+        } catch (e) { console.error('melee overlap error', e) }
+      },
+      (_, enemy) => enemy.active && !enemy._dead
     )
 
+    // Enemy contact
     this.physics.add.overlap(
       this.player, this.enemies,
-      (player, enemy) => { if (enemy.active) player.takeDamage(enemy.damage) }
+      (player, enemy) => {
+        try {
+          if (enemy._dead || !enemy.active) return
+          player.takeDamage(enemy.damage)
+        } catch (e) { console.error('enemy contact error', e) }
+      },
+      (_, enemy) => enemy.active && !enemy._dead
     )
 
+    // Dew bite
     this.physics.add.overlap(
       this.companion.attackHitbox, this.enemies,
-      (_, enemy) => { if (enemy.active) enemy.takeDamage(this.companion.attackDamage) }
+      (_, enemy) => {
+        try {
+          if (enemy._dead || !enemy.active) return
+          enemy.takeDamage(this.companion.attackDamage)
+        } catch (e) { console.error('dew bite error', e) }
+      },
+      (_, enemy) => enemy.active && !enemy._dead
     )
 
+    // Aqua bolt vs enemy
     this.physics.add.overlap(
       this.projectiles, this.enemies,
       (proj, enemy) => {
-        if (!proj.active || !enemy.active) return
-        enemy.takeDamage(proj.damage)
-        // Defer projectile destroy to next frame
-        this.time.delayedCall(0, () => { if (proj.active) proj.destroy() })
-      }
+        try {
+          if (proj._consumed) return
+          if (enemy._dead || !enemy.active) return
+          console.log('[HIT] proj hit enemy, enemy hp before:', enemy.hp)
+          proj._consumed = true
+          enemy.takeDamage(proj.damage)
+          proj.setActive(false).setVisible(false)
+          proj.body.enable = false
+          this.time.delayedCall(0, () => { if (proj.scene) proj.destroy() })
+          console.log('[HIT] enemy hp after:', enemy.hp, 'dead:', enemy._dead)
+        } catch (e) { console.error('projectile overlap error', e) }
+      },
+      (proj, enemy) => proj.active && !proj._consumed && enemy.active && !enemy._dead
     )
 
+    // Projectile vs wall
     this.physics.add.collider(
       this.projectiles, this.walls,
-      (proj) => { this.time.delayedCall(0, () => { if (proj.active) proj.destroy() }) }
+      (proj) => {
+        try {
+          if (proj._consumed) return
+          proj._consumed = true
+          proj.setActive(false).setVisible(false)
+          proj.body.enable = false
+          this.time.delayedCall(0, () => { if (proj.scene) proj.destroy() })
+        } catch (e) { console.error('wall collider error', e) }
+      },
+      (proj) => proj.active && !proj._consumed
     )
   }
 
   update(time, delta) {
-    this.player.update(time, delta)
-    this.companion.update(time, delta)
-    this.enemies.getChildren().forEach(e => { if (e.active) e.update(time, delta) })
-    this.debug.update()
+    try {
+      this.player.update(time, delta)
+      this.companion.update(time, delta)
+      this.enemies.getChildren().forEach(e => {
+        if (e.active && !e._dead) e.update(time, delta)
+      })
+      this.debug.update()
+    } catch (e) {
+      console.error('GameScene update error', e)
+    }
   }
 }
