@@ -25,7 +25,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('player', 'assets/sprites/player.png', {
+    this.load.spritesheet('player', 'assets/sprites/sage.png', {
       frameWidth: FRAME_W,
       frameHeight: FRAME_H,
     })
