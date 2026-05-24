@@ -6,9 +6,9 @@ import { PLAYER, DEPTHS } from '../config/Constants.js'
 
 const STATES = { IDLE: 'idle', WALK: 'walk', ATTACK: 'attack', HURT: 'hurt', DEAD: 'dead' }
 
-// Displayed size after scaling the 128×160 sprite sheet frame
+// Displayed size after scaling the 128×128 sprite sheet frame
 const DISPLAY_W = 64
-const DISPLAY_H = 80
+const DISPLAY_H = 64
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
