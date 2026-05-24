@@ -64,7 +64,8 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, 480, 270)
     this.companion = new Companion(this, 420, 270, this.player)
 
-    this.enemies = this.add.group()
+    // Use physics group for enemies so overlap detection works reliably
+    this.enemies = this.physics.add.group()
     const spawnPoints = [{ x: 700, y: 180 }, { x: 740, y: 380 }, { x: 200, y: 200 }]
     spawnPoints.forEach(pos => {
       this.enemies.add(new Mossling(this, pos.x, pos.y, this.player))
@@ -74,7 +75,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.companion, this.walls)
     this.physics.add.collider(this.enemies, this.walls)
 
-    // Sage melee
+    // Sage melee vs enemies
     this.physics.add.overlap(
       this.player.attackHitbox, this.enemies,
       (_, enemy) => {
@@ -82,11 +83,10 @@ export class GameScene extends Phaser.Scene {
           if (enemy._dead || !enemy.active) return
           enemy.takeDamage(this.player.attackDamage)
         } catch (e) { console.error('melee overlap error', e) }
-      },
-      (_, enemy) => enemy.active && !enemy._dead
+      }
     )
 
-    // Enemy contact
+    // Enemy contact damage to player
     this.physics.add.overlap(
       this.player, this.enemies,
       (player, enemy) => {
@@ -94,8 +94,7 @@ export class GameScene extends Phaser.Scene {
           if (enemy._dead || !enemy.active) return
           player.takeDamage(enemy.damage)
         } catch (e) { console.error('enemy contact error', e) }
-      },
-      (_, enemy) => enemy.active && !enemy._dead
+      }
     )
 
     // Dew bite
@@ -106,43 +105,48 @@ export class GameScene extends Phaser.Scene {
           if (enemy._dead || !enemy.active) return
           enemy.takeDamage(this.companion.attackDamage)
         } catch (e) { console.error('dew bite error', e) }
-      },
-      (_, enemy) => enemy.active && !enemy._dead
+      }
     )
+  }
 
-    // Aqua bolt vs enemy
-    this.physics.add.overlap(
-      this.projectiles, this.enemies,
-      (proj, enemy) => {
-        try {
-          if (proj._consumed) return
-          if (enemy._dead || !enemy.active) return
-          console.log('[HIT] proj hit enemy, enemy hp before:', enemy.hp)
-          proj._consumed = true
-          enemy.takeDamage(proj.damage)
-          proj.setActive(false).setVisible(false)
-          proj.body.enable = false
-          this.time.delayedCall(0, () => { if (proj.scene) proj.destroy() })
-          console.log('[HIT] enemy hp after:', enemy.hp, 'dead:', enemy._dead)
-        } catch (e) { console.error('projectile overlap error', e) }
-      },
-      (proj, enemy) => proj.active && !proj._consumed && enemy.active && !enemy._dead
-    )
+  // Manual projectile collision — checked every frame, fully controlled
+  _checkProjectiles() {
+    const projs = this.projectiles.getChildren()
+    const enemyList = this.enemies.getChildren()
 
-    // Projectile vs wall
-    this.physics.add.collider(
-      this.projectiles, this.walls,
-      (proj) => {
-        try {
-          if (proj._consumed) return
+    for (const proj of projs) {
+      if (!proj.active || proj._consumed) continue
+
+      // Wall bounds check
+      const bounds = this.physics.world.bounds
+      if (
+        proj.x < bounds.x + 64 || proj.x > bounds.right - 64 ||
+        proj.y < bounds.y + 64 || proj.y > bounds.bottom - 64
+      ) {
+        proj._consumed = true
+        proj.setActive(false).setVisible(false)
+        if (proj.body) proj.body.enable = false
+        this.time.delayedCall(0, () => { try { if (proj.scene) proj.destroy() } catch (e) {} })
+        continue
+      }
+
+      // Enemy hit check via distance
+      for (const enemy of enemyList) {
+        if (!enemy.active || enemy._dead) continue
+
+        const dist = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y)
+        if (dist < 24) {
+          console.log(`[HIT] dist=${dist.toFixed(1)} proj=(${proj.x.toFixed(0)},${proj.y.toFixed(0)}) enemy=(${enemy.x.toFixed(0)},${enemy.y.toFixed(0)}) hp=${enemy.hp}`)
           proj._consumed = true
           proj.setActive(false).setVisible(false)
-          proj.body.enable = false
-          this.time.delayedCall(0, () => { if (proj.scene) proj.destroy() })
-        } catch (e) { console.error('wall collider error', e) }
-      },
-      (proj) => proj.active && !proj._consumed
-    )
+          if (proj.body) proj.body.enable = false
+          this.time.delayedCall(0, () => { try { if (proj.scene) proj.destroy() } catch (e) {} })
+
+          try { enemy.takeDamage(proj.damage) } catch (e) { console.error('[HIT] takeDamage error', e) }
+          break
+        }
+      }
+    }
   }
 
   update(time, delta) {
@@ -152,6 +156,7 @@ export class GameScene extends Phaser.Scene {
       this.enemies.getChildren().forEach(e => {
         if (e.active && !e._dead) e.update(time, delta)
       })
+      this._checkProjectiles()
       this.debug.update()
     } catch (e) {
       console.error('GameScene update error', e)
