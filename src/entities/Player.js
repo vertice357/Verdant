@@ -202,6 +202,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     EventBus.emit(EVENTS.PLAYER_DIED)
   }
 
+  // Phaser calls this whenever an animation frame changes to auto-resize the
+  // physics body. We set body size manually so we suppress it entirely.
+  setSizeToFrame() { return this }
+
   // ─── helpers ─────────────────────────────────────────────────────────────
 
   _hitboxPos() {
