@@ -99,6 +99,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   _playAnim() {
     if (this.state === STATES.ATTACK) return
 
+    // Guard: ensure texture is loaded before setting frames
+    if (!this.texture || !this.texture.key) return
+
     // For now, just set frame directly without playing animation
     try {
       this.setFlipX(this.facing === 'left')
