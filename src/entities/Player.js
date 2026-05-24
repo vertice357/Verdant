@@ -98,20 +98,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   _playAnim() {
     if (this.state === STATES.ATTACK) return
-
-    // Guard: check if sprite is properly initialized in the scene
     if (!this.active || !this.visible) return
 
-    try {
-      this.setFlipX(this.facing === 'left')
+    const dir = this.facing
+    const key = this.state === STATES.WALK
+      ? `player_walk_${dir}`
+      : `player_idle_${dir}`
 
-      if (this.state === STATES.WALK) {
-        this.setFrame(1) // Walk frame
-      } else {
-        this.setFrame(0) // Idle frame
-      }
-    } catch (e) {
-      // Silently ignore frame errors during initialization
+    if (this.anims.currentAnim?.key !== key) {
+      this.play(key)
     }
   }
 
@@ -122,13 +117,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.iframes = true
     this.attackHitbox.body.enable = true
     this._drawSwingArc()
-
-    // Set frame directly instead of playing animation
-    try {
-      this.setFrame(0) // Attack frame
-    } catch (e) {
-      console.error('[Player._doAttack] Frame error:', e.message)
-    }
+    this.play(`player_attack_${this.facing}`)
 
     if (this._attackTimer) this._attackTimer.remove()
     this._attackTimer = this.scene.time.delayedCall(PLAYER.ATTACK_DURATION, () => {

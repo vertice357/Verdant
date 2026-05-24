@@ -1,20 +1,34 @@
 import Phaser from 'phaser'
 
-// Sprite sheet frame dimensions — adjust these if the image differs
-const FRAME_W = 128
-const FRAME_H = 128  // Changed from 160 to 128 (power of 2)
-const SHEET_COLS = 2 // Temporary: testing with minimal PNG
+// Spritesheet: 512×512, 4 cols × 4 rows, 128×128px per frame
+// Frame index = row * 4 + col
+//
+//         col0          col1          col2          col3
+// row0 |  0 idle_down | 1 idle_up  | 2 idle_left | 3 idle_right |
+// row1 |  4 walk_down | 5 walk_up  | 6 walk_left | 7 walk_right | (walk A)
+// row2 |  8 walk_down | 9 walk_up  |10 walk_left |11 walk_right | (walk B)
+// row3 | 12 atk_down  |13 atk_up   |14 atk_left  |15 atk_right  |
 
-// Frame indices — adjust based on actual spritesheet
-// For 256×128 test PNG: only 2 frames (0, 1)
-const F = {
-  IDLE_DOWN:   0,
-  IDLE_UP:     1,
-  IDLE_SIDE:   0,
-  WALK_START:  0,   // Use available frames
-  WALK_END:    1,
-  ATK_START:   0,
-  ATK_END:     1,
+const FRAME_W = 128
+const FRAME_H = 128
+
+export const F = {
+  IDLE_DOWN:  0,
+  IDLE_UP:    1,
+  IDLE_LEFT:  2,
+  IDLE_RIGHT: 3,
+  WALK_DOWN_A: 4,
+  WALK_UP_A:   5,
+  WALK_LEFT_A: 6,
+  WALK_RIGHT_A:7,
+  WALK_DOWN_B: 8,
+  WALK_UP_B:   9,
+  WALK_LEFT_B: 10,
+  WALK_RIGHT_B:11,
+  ATK_DOWN:   12,
+  ATK_UP:     13,
+  ATK_LEFT:   14,
+  ATK_RIGHT:  15,
 }
 
 export class BootScene extends Phaser.Scene {
@@ -25,37 +39,21 @@ export class BootScene extends Phaser.Scene {
   preload() {
     const assetUrl = 'assets/sprites/sage.png'
 
-    // First check: can we fetch the asset?
     fetch(assetUrl)
-      .then(r => {
-        console.log(`✓ Asset exists at ${assetUrl} (status ${r.status})`)
-      })
+      .then(r => console.log(`✓ Asset exists at ${assetUrl} (status ${r.status})`))
       .catch(e => console.error(`❌ Asset not found: ${assetUrl}`, e))
 
-    const load = this.load
-
-    load.on('loaderror', (fileObj) => {
-      console.error('❌ Phaser load error:', {
-        key: fileObj.key,
-        url: fileObj.url,
-        state: fileObj.state,
-      })
+    this.load.on('loaderror', (fileObj) => {
+      console.error('❌ Phaser load error:', { key: fileObj.key, url: fileObj.url })
     })
 
-    load.on('filecomplete', (key) => {
-      console.log(`✓ Phaser loaded: ${key}`)
-    })
+    this.load.on('filecomplete', (key) => console.log(`✓ Phaser loaded: ${key}`))
 
     console.log(`[preload] Loading spritesheet from: ${assetUrl}`)
-    load.spritesheet('player', assetUrl, {
-      frameWidth: FRAME_W,
-      frameHeight: FRAME_H,
-    })
+    this.load.spritesheet('player', assetUrl, { frameWidth: FRAME_W, frameHeight: FRAME_H })
   }
 
   create() {
-    console.log('[create] Texture manager keys:', this.textures.getTextureKeys())
-
     const tex = this.textures.get('player')
     if (!tex) {
       console.error('❌ CRITICAL: player texture undefined in create()')
@@ -67,50 +65,37 @@ export class BootScene extends Phaser.Scene {
 
     const anims = this.anims
 
-    // Use generateFrameNumbers for all animations (more reliable than manual frame objects)
-    anims.create({
-      key: 'player_idle_down',
-      frames: anims.generateFrameNumbers('player', { start: F.IDLE_DOWN, end: F.IDLE_DOWN }),
-      frameRate: 1,
-      repeat: -1,
-    })
+    // Idle — one frame per direction, looped
+    for (const [key, frame] of [
+      ['player_idle_down',  F.IDLE_DOWN],
+      ['player_idle_up',    F.IDLE_UP],
+      ['player_idle_left',  F.IDLE_LEFT],
+      ['player_idle_right', F.IDLE_RIGHT],
+    ]) {
+      anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [frame] }), frameRate: 1, repeat: -1 })
+    }
 
-    anims.create({
-      key: 'player_idle_up',
-      frames: anims.generateFrameNumbers('player', { start: F.IDLE_UP, end: F.IDLE_UP }),
-      frameRate: 1,
-      repeat: -1,
-    })
+    // Walk — two frames (A/B) per direction, looped
+    for (const [key, frameA, frameB] of [
+      ['player_walk_down',  F.WALK_DOWN_A,  F.WALK_DOWN_B],
+      ['player_walk_up',    F.WALK_UP_A,    F.WALK_UP_B],
+      ['player_walk_left',  F.WALK_LEFT_A,  F.WALK_LEFT_B],
+      ['player_walk_right', F.WALK_RIGHT_A, F.WALK_RIGHT_B],
+    ]) {
+      anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [frameA, frameB] }), frameRate: 8, repeat: -1 })
+    }
 
-    anims.create({
-      key: 'player_idle_side',
-      frames: anims.generateFrameNumbers('player', { start: F.IDLE_SIDE, end: F.IDLE_SIDE }),
-      frameRate: 1,
-      repeat: -1,
-    })
-
-    anims.create({
-      key: 'player_walk',
-      frames: anims.generateFrameNumbers('player', {
-        start: F.WALK_START,
-        end: F.WALK_END,
-      }),
-      frameRate: 10,
-      repeat: -1,
-    })
-
-    anims.create({
-      key: 'player_attack',
-      frames: anims.generateFrameNumbers('player', {
-        start: F.ATK_START,
-        end: F.ATK_END,
-      }),
-      frameRate: 14,
-      repeat: 0,
-    })
+    // Attack — one frame per direction, plays once
+    for (const [key, frame] of [
+      ['player_attack_down',  F.ATK_DOWN],
+      ['player_attack_up',    F.ATK_UP],
+      ['player_attack_left',  F.ATK_LEFT],
+      ['player_attack_right', F.ATK_RIGHT],
+    ]) {
+      anims.create({ key, frames: anims.generateFrameNumbers('player', { frames: [frame] }), frameRate: 14, repeat: 0 })
+    }
 
     console.log('✓ All animations registered')
-
     console.log('Boot OK')
     this.scene.start('GameScene')
     this.scene.launch('HUDScene')
