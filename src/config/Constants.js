@@ -19,7 +19,10 @@ export const PLAYER = {
   MANA_MAX: 5,
   MANA_REGEN_RATE: 1500,
   ATTACK_DAMAGE: 2,
-  IFRAME_DURATION: 1500,
+  ATTACK_DURATION: 280,       // ms the swing hitbox stays active
+  ATTACK_HITBOX_SIZE: 56,     // wider arc
+  ATTACK_OFFSET: 42,          // further reach from player center
+  IFRAME_DURATION: 1200,
 }
 
 export const DEW = {
@@ -37,4 +40,6 @@ export const ENEMY = {
   MOSSLING_DAMAGE: 1,
   MOSSLING_DETECT_RANGE: 150,
   MOSSLING_PATROL_SPEED: 40,
+  KNOCKBACK_FORCE: 240,       // velocity applied on hit
+  KNOCKBACK_DURATION: 180,    // ms before enemy regains control
 }

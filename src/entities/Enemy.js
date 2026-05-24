@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { EventBus, EVENTS } from '../systems/EventBus.js'
-import { DEPTHS } from '../config/Constants.js'
+import { DEPTHS, ENEMY } from '../config/Constants.js'
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
@@ -18,28 +18,31 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this._gfx = scene.add.graphics()
     this._dead = false
     this._hitCooldown = false
-    this._isFlashing = false  // prevents update() from overwriting hit flash
+    this._isFlashing = false
+    this._knockedBack = false
 
     this.drawSprite()
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, sourceX, sourceY) {
     if (this._dead || this._hitCooldown) return
     console.log(`[ENEMY] takeDamage(${amount}), hp: ${this.hp} -> ${this.hp - amount}`)
 
     this.hp -= amount
     this._hitCooldown = true
     this._isFlashing = true
-    this.drawSprite(0xffffff)  // white flash on hit
-
-    // Show hit sparks
+    this.drawSprite(0xffffff)
     this._spawnHitEffect()
+
+    // Knockback — push enemy away from hit source
+    if (sourceX !== undefined && sourceY !== undefined) {
+      this._applyKnockback(sourceX, sourceY)
+    }
 
     this.scene.time.delayedCall(120, () => {
       if (this._dead) return
-      this.drawSprite(0xff4444)  // red tint after white flash
+      this.drawSprite(0xff4444)
     })
-
     this.scene.time.delayedCall(300, () => {
       this._isFlashing = false
       this._hitCooldown = false
@@ -52,21 +55,31 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  _applyKnockback(sourceX, sourceY) {
+    if (!this.body) return
+    this._knockedBack = true
+    const angle = Phaser.Math.Angle.Between(sourceX, sourceY, this.x, this.y)
+    this.setVelocity(
+      Math.cos(angle) * ENEMY.KNOCKBACK_FORCE,
+      Math.sin(angle) * ENEMY.KNOCKBACK_FORCE
+    )
+    this.scene.time.delayedCall(ENEMY.KNOCKBACK_DURATION, () => {
+      this._knockedBack = false
+    })
+  }
+
   _spawnHitEffect() {
-    // Quick star-burst sparks at hit position
     const sparks = this.scene.add.graphics()
     sparks.setDepth(DEPTHS.ENEMIES + 1)
     sparks.fillStyle(0xfbbf24, 1)
-    const offsets = [[-8, -8], [8, -8], [-8, 8], [8, 8], [0, -12], [0, 12]]
+    const offsets = [[-8,-8],[8,-8],[-8,8],[8,8],[0,-12],[0,12]]
     offsets.forEach(([ox, oy]) => sparks.fillRect(this.x + ox - 2, this.y + oy - 2, 4, 4))
     this.scene.time.delayedCall(180, () => sparks.destroy())
   }
 
   _die() {
     if (this._dead) return
-    console.log('[ENEMY] _die() called')
     this._dead = true
-
     this.setActive(false)
     this.setVisible(false)
     if (this.body) this.body.enable = false
@@ -83,9 +96,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     })
   }
 
-  drawSprite(flashColor = null) {
-    // Overridden by subclasses — flashColor passed through
-  }
+  drawSprite(flashColor = null) {}
 
   syncGfx() {
     if (this._gfx && this.active) this._gfx.setPosition(this.x, this.y)

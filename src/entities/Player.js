@@ -15,9 +15,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(DEPTHS.PLAYER)
     this.body.setSize(20, 20)
 
-    // Draw placeholder sprite
     this._gfx = scene.add.graphics()
-    this._drawSprite()
+    this._swingGfx = scene.add.graphics().setDepth(DEPTHS.PLAYER - 1)
 
     this.hp = PLAYER.HP_MAX
     this.mana = PLAYER.MANA_MAX
@@ -25,20 +24,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.facing = 'down'
     this.state = STATES.IDLE
     this.iframes = false
-    this.attackQueued = false
 
     this.input = new InputSystem(scene)
     this.spellSystem = new SpellSystem(scene, this)
 
-    // Attack hitbox (inactive by default)
+    // Attack hitbox — larger and further out
     this.attackHitbox = scene.physics.add.image(x, y, null)
-    this.attackHitbox.body.setSize(36, 36)
+    this.attackHitbox.body.setSize(PLAYER.ATTACK_HITBOX_SIZE, PLAYER.ATTACK_HITBOX_SIZE)
     this.attackHitbox.body.enable = false
     this.attackHitbox.setVisible(false)
     this.attackHitbox.setDepth(DEPTHS.PLAYER)
 
-    // Mana regen
-    this._manaTimer = scene.time.addEvent({
+    scene.time.addEvent({
       delay: PLAYER.MANA_REGEN_RATE,
       loop: true,
       callback: () => {
@@ -71,16 +68,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.spellSystem.cast('aquaBolt', this.facing)
     }
 
-    // Sync graphics to physics body
     this._gfx.setPosition(this.x, this.y)
+    this._swingGfx.setPosition(this.x, this.y)
     this.attackHitbox.setPosition(...this._hitboxPos())
   }
 
   _handleMovement() {
     const { dx, dy } = this.input.getMovement()
-    const speed = PLAYER.SPEED
-
-    this.setVelocity(dx * speed, dy * speed)
+    this.setVelocity(dx * PLAYER.SPEED, dy * PLAYER.SPEED)
 
     if (dx !== 0 || dy !== 0) {
       this.state = STATES.WALK
@@ -92,22 +87,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.state = STATES.IDLE
     }
-
     this._drawSprite()
   }
 
   _doAttack() {
     this.state = STATES.ATTACK
     this.setVelocity(0, 0)
+
+    // Invulnerable during the swing
+    this.iframes = true
     this.attackHitbox.body.enable = true
+    this._drawSwingArc()
+    this._drawSprite()
 
     if (this._attackTimer) this._attackTimer.remove()
-    this._attackTimer = this.scene.time.delayedCall(200, () => {
+    this._attackTimer = this.scene.time.delayedCall(PLAYER.ATTACK_DURATION, () => {
       this.attackHitbox.body.enable = false
+      this._swingGfx.clear()
       this.state = STATES.IDLE
+      // Short grace period after swing before iframes drop
+      this.scene.time.delayedCall(80, () => { this.iframes = false })
     })
-
-    this._drawSprite()
   }
 
   takeDamage(amount) {
@@ -119,45 +119,68 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.hp <= 0) {
       this.state = STATES.DEAD
       EventBus.emit(EVENTS.PLAYER_DIED)
-      console.log('Game Over')
       return
     }
 
     this.iframes = true
-    this.scene.time.delayedCall(PLAYER.IFRAME_DURATION, () => {
-      this.iframes = false
-    })
+    this.scene.time.delayedCall(PLAYER.IFRAME_DURATION, () => { this.iframes = false })
 
-    // Flash effect
     this.scene.tweens.add({
       targets: this._gfx,
       alpha: 0,
       yoyo: true,
       repeat: 5,
-      duration: 120,
+      duration: 100,
       onComplete: () => this._gfx.setAlpha(1),
     })
   }
 
   _hitboxPos() {
-    const offset = 28
-    const map = { up: [this.x, this.y - offset], down: [this.x, this.y + offset], left: [this.x - offset, this.y], right: [this.x + offset, this.y] }
+    const o = PLAYER.ATTACK_OFFSET
+    const map = {
+      up:    [this.x,     this.y - o],
+      down:  [this.x,     this.y + o],
+      left:  [this.x - o, this.y    ],
+      right: [this.x + o, this.y    ],
+    }
     return map[this.facing]
+  }
+
+  // Draw a visible swing arc in the attack direction
+  _drawSwingArc() {
+    this._swingGfx.clear()
+    this._swingGfx.lineStyle(3, 0xdda0f0, 0.85)
+    this._swingGfx.fillStyle(0xc084fc, 0.18)
+
+    const r = PLAYER.ATTACK_OFFSET + 10
+    const angles = {
+      right: { start: -60, end: 60 },
+      left:  { start: 120, end: 240 },
+      down:  { start: 30,  end: 150 },
+      up:    { start: 210, end: 330 },
+    }
+    const { start, end } = angles[this.facing]
+    const s = Phaser.Math.DegToRad(start)
+    const e = Phaser.Math.DegToRad(end)
+
+    this._swingGfx.beginPath()
+    this._swingGfx.moveTo(0, 0)
+    this._swingGfx.arc(0, 0, r, s, e)
+    this._swingGfx.closePath()
+    this._swingGfx.fillPath()
+    this._swingGfx.strokePath()
   }
 
   _drawSprite() {
     this._gfx.clear()
-    // Body
-    const color = this.state === STATES.ATTACK ? 0xdda0f0 : this.state === STATES.HURT ? 0xff4444 : 0xc084fc
+    const color = this.state === STATES.ATTACK ? 0xdda0f0 : 0xc084fc
     this._gfx.fillStyle(color, 1)
     this._gfx.fillRect(-10, -14, 20, 24)
-    // Cloak (lavender)
     this._gfx.fillStyle(0x9333ea, 1)
     this._gfx.fillRect(-12, -4, 24, 14)
-    // Head
     this._gfx.fillStyle(0xfbbf80, 1)
     this._gfx.fillRect(-6, -20, 12, 10)
-    // Direction indicator
+    // Facing dot
     this._gfx.fillStyle(0xffffff, 1)
     const d = this.facing
     if (d === 'down')  this._gfx.fillRect(-2, 8, 4, 4)
@@ -173,6 +196,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   destroy() {
     this._gfx.destroy()
+    this._swingGfx.destroy()
     super.destroy()
   }
 }
