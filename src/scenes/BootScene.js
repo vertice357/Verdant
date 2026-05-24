@@ -61,37 +61,32 @@ export class BootScene extends Phaser.Scene {
     const tex = this.textures.get('player')
     if (!tex) {
       console.error('❌ CRITICAL: player texture undefined in create()')
-      console.error('Available textures:', this.textures.getTextureKeys())
-      return // Bail out; can't proceed without texture
+      return
     }
 
     const frameTotal = tex.frameTotal || tex.getFrameNames?.().length || 0
     console.log(`✓ Texture 'player' exists with ${frameTotal} frames`)
 
-    if (frameTotal === 0) {
-      console.error('❌ player texture has zero frames!')
-      return
-    }
-
     const anims = this.anims
 
+    // Use generateFrameNumbers for all animations (more reliable than manual frame objects)
     anims.create({
       key: 'player_idle_down',
-      frames: [{ key: 'player', frame: F.IDLE_DOWN }],
+      frames: anims.generateFrameNumbers('player', { start: F.IDLE_DOWN, end: F.IDLE_DOWN }),
       frameRate: 1,
       repeat: -1,
     })
 
     anims.create({
       key: 'player_idle_up',
-      frames: [{ key: 'player', frame: F.IDLE_UP }],
+      frames: anims.generateFrameNumbers('player', { start: F.IDLE_UP, end: F.IDLE_UP }),
       frameRate: 1,
       repeat: -1,
     })
 
     anims.create({
       key: 'player_idle_side',
-      frames: [{ key: 'player', frame: F.IDLE_SIDE }],
+      frames: anims.generateFrameNumbers('player', { start: F.IDLE_SIDE, end: F.IDLE_SIDE }),
       frameRate: 1,
       repeat: -1,
     })
@@ -115,6 +110,8 @@ export class BootScene extends Phaser.Scene {
       frameRate: 14,
       repeat: 0,
     })
+
+    console.log('✓ All animations registered')
 
     console.log('Boot OK')
     this.scene.start('GameScene')
