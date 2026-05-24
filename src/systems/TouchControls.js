@@ -4,14 +4,15 @@ const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches
 
 export class TouchControls {
   constructor(scene) {
+    this._dx = 0
+    this._dy = 0
     this._attackPressed = false
     this._spellPressed  = false
-    this._joystick      = null
-    this._visible       = false
+    this._active        = false
 
     if (!isTouchDevice()) return
 
-    this._visible = true
+    this._active = true
     this._build(scene)
   }
 
@@ -19,64 +20,78 @@ export class TouchControls {
     const W = scene.scale.width
     const H = scene.scale.height
 
-    // ── Joystick (bottom-left) ────────────────────────────────────────────
-    const joyX = 110
-    const joyY = H - 110
+    // ── Joystick ──────────────────────────────────────────────────────────
+    const JOY_X  = 110
+    const JOY_Y  = H - 110
+    const RADIUS = 60
+    const DEAD   = 12   // dead-zone pixels
 
-    const base  = scene.add.circle(joyX, joyY, 60, 0x6d28d9, 0.3)
+    const base = scene.add.circle(JOY_X, JOY_Y, RADIUS, 0x6d28d9, 0.3)
       .setDepth(DEPTHS.HUD).setScrollFactor(0)
-    const thumb = scene.add.circle(joyX, joyY, 30, 0xa78bfa, 0.7)
+    const thumb = scene.add.circle(JOY_X, JOY_Y, 28, 0xa78bfa, 0.75)
       .setDepth(DEPTHS.HUD).setScrollFactor(0)
 
-    this._joystick = scene.plugins.get('rexVirtualJoystick').add(scene, {
-      x: joyX,
-      y: joyY,
-      radius: 60,
-      base,
-      thumb,
-      dir: '8dir',
-      forceMin: 16,
+    // Touch tracking for joystick
+    let joyPointerId = null
+    let joyOriginX = JOY_X
+    let joyOriginY = JOY_Y
+
+    scene.input.on('pointerdown', (p) => {
+      if (joyPointerId !== null) return
+      if (p.x > W / 2) return   // right half = buttons only
+      joyPointerId = p.id
+      joyOriginX   = p.x
+      joyOriginY   = p.y
+      base.setPosition(p.x, p.y)
+      thumb.setPosition(p.x, p.y)
     })
 
-    // ── Attack button (bottom-right) ──────────────────────────────────────
-    const atkX = W - 80
-    const atkY = H - 90
+    scene.input.on('pointermove', (p) => {
+      if (p.id !== joyPointerId) return
+      const dx  = p.x - joyOriginX
+      const dy  = p.y - joyOriginY
+      const len = Math.sqrt(dx * dx + dy * dy)
+      const clamped = Math.min(len, RADIUS)
+      const nx  = len > 0 ? dx / len : 0
+      const ny  = len > 0 ? dy / len : 0
 
-    const atkBg = scene.add.circle(atkX, atkY, 40, 0xdc2626, 0.4)
+      thumb.setPosition(joyOriginX + nx * clamped, joyOriginY + ny * clamped)
+
+      if (len > DEAD) {
+        this._dx = nx
+        this._dy = ny
+      } else {
+        this._dx = 0
+        this._dy = 0
+      }
+    })
+
+    scene.input.on('pointerup', (p) => {
+      if (p.id !== joyPointerId) return
+      joyPointerId = null
+      this._dx = 0
+      this._dy = 0
+      base.setPosition(JOY_X, JOY_Y)
+      thumb.setPosition(JOY_X, JOY_Y)
+    })
+
+    // ── Attack button ─────────────────────────────────────────────────────
+    const atkBg = scene.add.circle(W - 80, H - 90, 40, 0xdc2626, 0.4)
       .setDepth(DEPTHS.HUD).setScrollFactor(0).setInteractive()
-    scene.add.text(atkX, atkY, '⚔', { fontSize: '22px' })
+    scene.add.text(W - 80, H - 90, '⚔', { fontSize: '22px' })
       .setOrigin(0.5).setDepth(DEPTHS.HUD).setScrollFactor(0)
-
     atkBg.on('pointerdown', () => { this._attackPressed = true })
-    atkBg.on('pointerup',   () => {})
 
-    // ── Spell button (above attack) ───────────────────────────────────────
-    const splX = W - 80
-    const splY = H - 185
-
-    const splBg = scene.add.circle(splX, splY, 40, 0x2563eb, 0.4)
+    // ── Spell button ──────────────────────────────────────────────────────
+    const splBg = scene.add.circle(W - 80, H - 185, 40, 0x2563eb, 0.4)
       .setDepth(DEPTHS.HUD).setScrollFactor(0).setInteractive()
-    scene.add.text(splX, splY, '✦', { fontSize: '22px' })
+    scene.add.text(W - 80, H - 185, '✦', { fontSize: '22px' })
       .setOrigin(0.5).setDepth(DEPTHS.HUD).setScrollFactor(0)
-
     splBg.on('pointerdown', () => { this._spellPressed = true })
-    splBg.on('pointerup',   () => {})
   }
 
-  // Called each frame by InputSystem — returns movement vector
-  getMovement() {
-    if (!this._joystick) return { dx: 0, dy: 0 }
-    const cursor = this._joystick.createCursorKeys()
-    let dx = 0, dy = 0
-    if (cursor.left.isDown)  dx -= 1
-    if (cursor.right.isDown) dx += 1
-    if (cursor.up.isDown)    dy -= 1
-    if (cursor.down.isDown)  dy += 1
-    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707 }
-    return { dx, dy }
-  }
+  getMovement() { return { dx: this._dx, dy: this._dy } }
 
-  // Consume and return one-shot presses
   attackJustPressed() {
     if (this._attackPressed) { this._attackPressed = false; return true }
     return false
@@ -87,5 +102,5 @@ export class TouchControls {
     return false
   }
 
-  get active() { return this._visible }
+  get active() { return this._active }
 }
