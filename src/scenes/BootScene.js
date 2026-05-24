@@ -25,13 +25,32 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('player', 'assets/sprites/sage.png', {
+    const load = this.load
+
+    load.on('loaderror', (fileObj) => {
+      console.error('❌ Failed to load:', fileObj.key, fileObj.url)
+    })
+
+    load.on('filecomplete', (key) => {
+      console.log(`✓ Loaded file: ${key}`)
+    })
+
+    load.spritesheet('player', 'assets/sprites/sage.png', {
       frameWidth: FRAME_W,
       frameHeight: FRAME_H,
     })
   }
 
   create() {
+    const tex = this.textures.get('player')
+    if (!tex || tex.frameTotal === 0) {
+      console.error('❌ player texture not loaded or empty')
+      console.error('Expected: assets/sprites/sage.png')
+      console.error('Texture manager keys:', this.textures.getTextureKeys())
+    } else {
+      console.log(`✓ Texture 'player' ready: ${tex.frameTotal} frames`)
+    }
+
     const anims = this.anims
 
     anims.create({
