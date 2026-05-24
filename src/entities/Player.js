@@ -99,19 +99,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   _playAnim() {
     if (this.state === STATES.ATTACK) return
 
+    // For now, just set frame directly without playing animation
     try {
+      this.setFlipX(this.facing === 'left')
+
       if (this.state === STATES.WALK) {
-        this.setFlipX(this.facing === 'left')
-        this.play('player_walk', true)
+        this.setFrame(1) // Walk frame
       } else {
-        this.setFlipX(this.facing === 'left')
-        if (this.facing === 'up') {
-          this.play('player_idle_up', true)
-        } else if (this.facing === 'down') {
-          this.play('player_idle_down', true)
-        } else {
-          this.play('player_idle_side', true)
-        }
+        this.setFrame(0) // Idle frame
       }
     } catch (e) {
       console.error('[Player._playAnim] Error:', e.message, { state: this.state, facing: this.facing })
@@ -126,10 +121,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.attackHitbox.body.enable = true
     this._drawSwingArc()
 
+    // Set frame directly instead of playing animation
     try {
-      this.play('player_attack', true)
+      this.setFrame(0) // Attack frame
     } catch (e) {
-      console.error('[Player._doAttack] Animation error:', e.message)
+      console.error('[Player._doAttack] Frame error:', e.message)
     }
 
     if (this._attackTimer) this._attackTimer.remove()
