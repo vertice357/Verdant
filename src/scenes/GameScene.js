@@ -21,15 +21,25 @@ export class GameScene extends Phaser.Scene {
     const touch = new TouchControls(this)
     this.player.input.setTouchControls(touch)
 
-    EventBus.on(EVENTS.PLAYER_DIED, () => {
+    this._onPlayerDied = () => {
       this.time.delayedCall(800, () => {
         this.add.text(480, 270, 'GAME OVER', {
           fontFamily: 'monospace', fontSize: '32px', color: '#ef4444',
         }).setOrigin(0.5).setDepth(DEPTHS.HUD)
-        this.add.text(480, 310, 'Refresh to restart', {
+        this.add.text(480, 310, 'Tap to restart', {
           fontFamily: 'monospace', fontSize: '14px', color: '#6b7280',
         }).setOrigin(0.5).setDepth(DEPTHS.HUD)
+
+        this.input.once('pointerdown', () => {
+          this.scene.restart()
+          this.scene.get('HUDScene').scene.restart()
+        })
       })
+    }
+    EventBus.on(EVENTS.PLAYER_DIED, this._onPlayerDied)
+
+    this.events.on('shutdown', () => {
+      EventBus.off(EVENTS.PLAYER_DIED, this._onPlayerDied)
     })
   }
 
@@ -141,12 +151,11 @@ export class GameScene extends Phaser.Scene {
         if (!enemy.active || enemy._dead) continue
         const dist = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y)
         if (dist < 24) {
-          console.log(`[HIT] bolt hit enemy hp=${enemy.hp}`)
           proj._consumed = true
           proj.setActive(false).setVisible(false)
           if (proj.body) proj.body.enable = false
           this.time.delayedCall(0, () => { try { if (proj.scene) proj.destroy() } catch (e) {} })
-          try { enemy.takeDamage(proj.damage, proj.x, proj.y) } catch (e) { console.error('[HIT] error', e) }
+          try { enemy.takeDamage(proj.damage, proj.x, proj.y) } catch (e) {}
           break
         }
       }
