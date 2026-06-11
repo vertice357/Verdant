@@ -93,6 +93,15 @@ export class BootScene extends Phaser.Scene {
       anims.create({ key, frames: anims.generateFrameNumbers('dew', { frames: [frame] }), frameRate: 14, repeat: 0 })
     }
 
+    // Generate the aqua bolt projectile texture once at boot
+    const gfx = this.add.graphics()
+    gfx.fillStyle(0x38bdf8, 1)
+    gfx.fillCircle(7, 7, 7)
+    gfx.lineStyle(2, 0xbae6fd, 0.6)
+    gfx.strokeCircle(7, 7, 9)
+    gfx.generateTexture('aquaBoltTex', 18, 18)
+    gfx.destroy()
+
     console.log('✓ All animations registered')
     console.log('Boot OK')
     this.scene.start('GameScene')

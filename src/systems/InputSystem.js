@@ -1,3 +1,5 @@
+import Phaser from 'phaser'
+
 export class InputSystem {
   constructor(scene) {
     this.keys = scene.input.keyboard.addKeys({

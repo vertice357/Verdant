@@ -12,9 +12,19 @@ export class HUDScene extends Phaser.Scene {
     this.mana = PLAYER.MANA_MAX
     this._buildHUD()
 
-    EventBus.on(EVENTS.PLAYER_DAMAGED, ({ hp }) => this._updateHP(hp))
-    EventBus.on(EVENTS.PLAYER_HEALED, ({ hp }) => this._updateHP(hp))
-    EventBus.on(EVENTS.PLAYER_MANA_CHANGED, ({ mana }) => this._updateMana(mana))
+    this._onDamaged = ({ hp }) => this._updateHP(hp)
+    this._onHealed  = ({ hp }) => this._updateHP(hp)
+    this._onMana    = ({ mana }) => this._updateMana(mana)
+
+    EventBus.on(EVENTS.PLAYER_DAMAGED, this._onDamaged)
+    EventBus.on(EVENTS.PLAYER_HEALED, this._onHealed)
+    EventBus.on(EVENTS.PLAYER_MANA_CHANGED, this._onMana)
+
+    this.events.on('shutdown', () => {
+      EventBus.off(EVENTS.PLAYER_DAMAGED, this._onDamaged)
+      EventBus.off(EVENTS.PLAYER_HEALED, this._onHealed)
+      EventBus.off(EVENTS.PLAYER_MANA_CHANGED, this._onMana)
+    })
   }
 
   _buildHUD() {

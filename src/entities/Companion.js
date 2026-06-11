@@ -52,15 +52,11 @@ export class Companion extends Phaser.Physics.Arcade.Sprite {
     const moving    = Math.abs(this.body.velocity.x) > 4 || Math.abs(this.body.velocity.y) > 4
     const attacking = this._ai.currentState === STATES.ATTACK
 
-    // Left-facing frames have the head cut in the source art — use right
-    // frames and flip horizontally instead (standard sprite mirror trick)
-    const dir   = this.facing === 'left' ? 'right' : this.facing
-    const flip  = this.facing === 'left'
-    this.setFlipX(flip)
+    this.setFlipX(false)
 
-    const key = attacking ? `dew_attack_${dir}`
-              : moving    ? `dew_walk_${dir}`
-              :              `dew_idle_${dir}`
+    const key = attacking ? `dew_attack_${this.facing}`
+              : moving    ? `dew_walk_${this.facing}`
+              :              `dew_idle_${this.facing}`
 
     if (this.anims.currentAnim?.key !== key) this.play(key)
   }

@@ -1,3 +1,4 @@
+import Phaser from 'phaser'
 import { Enemy } from '../Enemy.js'
 import { ENEMY } from '../../config/Constants.js'
 

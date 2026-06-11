@@ -26,7 +26,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount, sourceX, sourceY) {
     if (this._dead || this._hitCooldown) return
-    console.log(`[ENEMY] takeDamage(${amount}), hp: ${this.hp} -> ${this.hp - amount}`)
 
     this.hp -= amount
     this._hitCooldown = true
@@ -50,7 +49,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     })
 
     if (this.hp <= 0) {
-      console.log('[ENEMY] hp <= 0, calling _die()')
       this._die()
     }
   }

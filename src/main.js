@@ -29,6 +29,7 @@ const config = {
   height: 540,
   backgroundColor: '#1a1a2e',
   pixelArt: true,
+  input: { activePointers: 3 },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -38,13 +39,6 @@ const config = {
     arcade: { gravity: { y: 0 }, debug: false },
   },
   scene: [BootScene, GameScene, HUDScene],
-  callbacks: {
-    postBoot: (game) => {
-      game.events.on('step', () => {
-        // Heartbeat — if this stops firing the loop is frozen
-      })
-    },
-  },
 }
 
 const game = new Phaser.Game(config)

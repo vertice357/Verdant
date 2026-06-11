@@ -29,15 +29,6 @@ export class SpellSystem {
     const dirMap = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
     const [dx, dy] = dirMap[facing] || [0, 1]
 
-    // Create projectile as a visible circle using a Graphics texture
-    const gfx = this.scene.add.graphics()
-    gfx.fillStyle(spell.color, 1)
-    gfx.fillCircle(spell.size, spell.size, spell.size)
-    gfx.lineStyle(2, 0xbae6fd, 0.6)
-    gfx.strokeCircle(spell.size, spell.size, spell.size + 2)
-    gfx.generateTexture('aquaBoltTex', spell.size * 2 + 4, spell.size * 2 + 4)
-    gfx.destroy()
-
     // Spawn from Sage's hands — sprite visual centre with a slight upward
     // correction (body is anchored at feet, hands are higher up the frame)
     const originX = this.player.x
